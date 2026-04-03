@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools{
+        maven '3.9.14'
+    }
+
     environment {
         DOCKERHUB_USER = 'koti777'
         BACKEND_IMAGE = "${DOCKERHUB_USER}/spring-backend"
