@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'omhpatil'
+        DOCKERHUB_USER = 'koti777'
         BACKEND_IMAGE = "${DOCKERHUB_USER}/spring-backend"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/library-frotend"
         VM_USER = 'ec2-user'
-        VM_HOST = 'vm-ip'
+        VM_HOST = '51.21.132.193'
         DEPLOY_PATH = '/home/ec2-user/react-spring-project'
     }
 
@@ -22,8 +22,8 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} ./backend
-                    docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} ./frontend
+                    docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} ./spring-backend
+                    docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} ./library-frontend
 
                     docker tag ${BACKEND_IMAGE}:${GIT_COMMIT} ${BACKEND_IMAGE}:latest
                     docker tag ${FRONTEND_IMAGE}:${GIT_COMMIT} ${FRONTEND_IMAGE}:latest
@@ -35,12 +35,12 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'dockerhub-creds', 
-                    usernameVariable: 'DOCKER_USER', 
-                    passwordVariable: 'DOCKER_PASS')
+                    usernamePassword(credentialsId: 'dockerhub',
+                    usernameVariable: '$user',
+                    passwordVariable: '$pass')
                 ]) {
                     sh """
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    echo $pass | docker login -u $user --password-stdin
 
                     docker push ${BACKEND_IMAGE}:${GIT_COMMIT}
                     docker push ${BACKEND_IMAGE}:latest
@@ -56,8 +56,8 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 withCredentials([
-                    sshUserPrivateKey(credentialsId: 'ec2-ssh-key', 
-                    keyFileVariable: 'SSH_KEY', 
+                    sshUserPrivateKey(credentialsId: 'ec2-ssh-t',
+                    keyFileVariable: 'SSH_KEY',
                     usernameVariable: 'SSH_USER')
                 ]) {
                     sh """
