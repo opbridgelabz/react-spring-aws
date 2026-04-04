@@ -21,8 +21,9 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} ./spring-backend
-                    docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} ./library-frontend
+                    # ✅ --no-cache ensures fresh build with latest code every time
+                    docker build --no-cache -t ${BACKEND_IMAGE}:${GIT_COMMIT} ./spring-backend
+                    docker build --no-cache -t ${FRONTEND_IMAGE}:${GIT_COMMIT} ./library-frontend
                     docker tag ${BACKEND_IMAGE}:${GIT_COMMIT} ${BACKEND_IMAGE}:latest
                     docker tag ${FRONTEND_IMAGE}:${GIT_COMMIT} ${FRONTEND_IMAGE}:latest
                     """
@@ -95,17 +96,17 @@ pipeline {
                         echo "✅ Docker Compose already installed: $(docker compose version)"
                     fi
 
-                    # ✅ Force pull latest images one by one (no-parallel avoids rate limits)
+                    # Force pull latest images
                     cd ${DEPLOY_PATH}
                     docker compose pull --no-parallel
 
-                    # ✅ Stop and remove old containers
+                    # Stop old containers
                     docker compose down --remove-orphans
 
-                    # ✅ Force recreate containers so new images are always used
+                    # ✅ Force recreate so new image is always used
                     docker compose up -d --force-recreate --remove-orphans
 
-                    # ✅ Clean up old dangling images to save disk space
+                    # Clean old images
                     docker image prune -f
 
 ENDSSH
