@@ -14,7 +14,7 @@ function BookDetails({ bookId }) {
 
   return (
     <div>
-      <h3>Book Details</h3>
+      <h3>Book Details: </h3>
       <p><b>Title:</b> {book.title}</p>
       <p><b>Author:</b> {book.author}</p>
       <p><b>ISBN:</b> {book.isbn}</p>
