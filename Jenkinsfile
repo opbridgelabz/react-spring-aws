@@ -55,16 +55,42 @@ pipeline {
                     usernameVariable: 'SSH_USER')
                 ]) {
                     sh """
-                    chmod 600 \$SSH_KEY
-                    ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ${VM_USER}@${VM_HOST} 'mkdir -p ${DEPLOY_PATH}'
-                    rsync -av -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no" docker-compose.yml ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/
-                    rsync -av -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no" nginx/ ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/nginx/
-                    ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ${VM_USER}@${VM_HOST} '
-                        cd ${DEPLOY_PATH} &&
-                        docker compose pull &&
-                        docker compose down &&
-                        docker compose up -d --remove-orphans
-                    '
+                    # ✅ Fix 1: Copy key to own location before chmod
+                    mkdir -p ~/.ssh
+                    cp \$SSH_KEY ~/.ssh/deploy_key
+                    chmod 600 ~/.ssh/deploy_key
+
+                    # Create remote directory
+                    ssh -o StrictHostKeyChecking=no \
+                        -i ~/.ssh/deploy_key \
+                        ${VM_USER}@${VM_HOST} 'mkdir -p ${DEPLOY_PATH}'
+
+                    # Copy docker-compose.yml
+                    rsync -av -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+                        docker-compose.yml ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/
+
+                    # ✅ Fix 2: Only rsync nginx/ if it exists
+                    if [ -d "nginx" ]; then
+                        echo "✅ nginx/ found, syncing..."
+                        rsync -av -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+                            nginx/ ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/nginx/
+                    else
+                        echo "⚠️ nginx/ not found in workspace, skipping..."
+                    fi
+
+                    # ✅ Fix 3: Use heredoc so ${DEPLOY_PATH} expands correctly
+                    # ✅ Fix 4: Use docker-compose (V1) instead of docker compose (V2)
+                    ssh -o StrictHostKeyChecking=no \
+                        -i ~/.ssh/deploy_key \
+                        ${VM_USER}@${VM_HOST} << 'ENDSSH'
+                        cd ${DEPLOY_PATH} && \
+                        docker-compose pull && \
+                        docker-compose down && \
+                        docker-compose up -d --remove-orphans
+ENDSSH
+
+                    # ✅ Fix 5: Cleanup key after use
+                    rm -f ~/.ssh/deploy_key
                     """
                 }
             }
@@ -75,6 +101,8 @@ pipeline {
             echo "✅ Deployment completed successfully"
         }
         failure {
+            // ✅ Fix 6: Always cleanup key even on failure
+            sh 'rm -f ~/.ssh/deploy_key || true'
             echo "❌ Deployment failed - check Jenkins logs"
         }
     }
