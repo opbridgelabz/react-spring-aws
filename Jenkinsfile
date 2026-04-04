@@ -10,7 +10,7 @@ pipeline {
         BACKEND_IMAGE = "${DOCKERHUB_USER}/spring-backend"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/library-frotend"
         VM_USER = 'ec2-user'
-        VM_HOST = '51.21.132.193'
+        VM_HOST = '13.51.194.102'
         DEPLOY_PATH = '/home/ec2-user/react-spring-project'
     }
 
