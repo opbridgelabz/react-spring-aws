@@ -78,7 +78,7 @@ pipeline {
                         echo "⚠️ nginx/ not found in workspace, skipping..."
                     fi
 
-                    # Deploy on EC2
+                    # Install Docker Compose V2 on EC2 if not present, then deploy
                     ssh -o StrictHostKeyChecking=no \
                         -i ~/.ssh/deploy_key \
                         ${VM_USER}@${VM_HOST} bash << 'ENDSSH'
@@ -90,23 +90,16 @@ pipeline {
                         curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
                             -o ~/.docker/cli-plugins/docker-compose
                         chmod +x ~/.docker/cli-plugins/docker-compose
-                        echo "✅ Docker Compose installed: $(docker compose version)"
+                        echo "✅ Docker Compose installed: \$(docker compose version)"
                     else
-                        echo "✅ Docker Compose already installed: $(docker compose version)"
+                        echo "✅ Docker Compose already installed: \$(docker compose version)"
                     fi
 
-                    # ✅ Force pull latest images one by one (no-parallel avoids rate limits)
-                    cd ${DEPLOY_PATH}
-                    docker compose pull --no-parallel
-
-                    # ✅ Stop and remove old containers
-                    docker compose down --remove-orphans
-
-                    # ✅ Force recreate containers so new images are always used
-                    docker compose up -d --force-recreate --remove-orphans
-
-                    # ✅ Clean up old dangling images to save disk space
-                    docker image prune -f
+                    # Deploy
+                    cd ${DEPLOY_PATH} && \
+                    docker compose pull && \
+                    docker compose down && \
+                    docker compose up -d --remove-orphans
 
 ENDSSH
 
