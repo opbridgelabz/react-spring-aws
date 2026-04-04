@@ -13,6 +13,7 @@ services:
 
   backend:
     image: koti777/spring-backend:latest
+    pull_policy: always
     container_name: backend
     restart: always
     depends_on:
@@ -25,6 +26,7 @@ services:
 
   frontend:
     image: koti777/library-frotend:latest
+    pull_policy: always
     container_name: frontend
     restart: always
     depends_on:
