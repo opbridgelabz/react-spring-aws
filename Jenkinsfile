@@ -55,7 +55,7 @@ pipeline {
                     usernameVariable: 'SSH_USER')
                 ]) {
                     sh """
-                    # ✅ Fix 1: Copy key to own location before chmod
+                    # Setup clean key file
                     mkdir -p ~/.ssh
                     cp \$SSH_KEY ~/.ssh/deploy_key
                     chmod 600 ~/.ssh/deploy_key
@@ -69,7 +69,7 @@ pipeline {
                     rsync -av -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
                         docker-compose.yml ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/
 
-                    # ✅ Fix 2: Only rsync nginx/ if it exists
+                    # Copy nginx/ only if it exists locally
                     if [ -d "nginx" ]; then
                         echo "✅ nginx/ found, syncing..."
                         rsync -av -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
@@ -78,18 +78,32 @@ pipeline {
                         echo "⚠️ nginx/ not found in workspace, skipping..."
                     fi
 
-                    # ✅ Fix 3: Use heredoc so ${DEPLOY_PATH} expands correctly
-                    # ✅ Fix 4: Use docker-compose (V1) instead of docker compose (V2)
+                    # Install Docker Compose V2 on EC2 if not present, then deploy
                     ssh -o StrictHostKeyChecking=no \
                         -i ~/.ssh/deploy_key \
-                        ${VM_USER}@${VM_HOST} << 'ENDSSH'
-                        cd ${DEPLOY_PATH} && \
-                        docker-compose pull && \
-                        docker-compose down && \
-                        docker-compose up -d --remove-orphans
+                        ${VM_USER}@${VM_HOST} bash << 'ENDSSH'
+
+                    # ✅ Auto-install Docker Compose V2 if missing
+                    if ! docker compose version > /dev/null 2>&1; then
+                        echo "⚙️ Docker Compose not found, installing..."
+                        mkdir -p ~/.docker/cli-plugins
+                        curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+                            -o ~/.docker/cli-plugins/docker-compose
+                        chmod +x ~/.docker/cli-plugins/docker-compose
+                        echo "✅ Docker Compose installed: \$(docker compose version)"
+                    else
+                        echo "✅ Docker Compose already installed: \$(docker compose version)"
+                    fi
+
+                    # Deploy
+                    cd ${DEPLOY_PATH} && \
+                    docker compose pull && \
+                    docker compose down && \
+                    docker compose up -d --remove-orphans
+
 ENDSSH
 
-                    # ✅ Fix 5: Cleanup key after use
+                    # Cleanup key
                     rm -f ~/.ssh/deploy_key
                     """
                 }
@@ -101,7 +115,6 @@ ENDSSH
             echo "✅ Deployment completed successfully"
         }
         failure {
-            // ✅ Fix 6: Always cleanup key even on failure
             sh 'rm -f ~/.ssh/deploy_key || true'
             echo "❌ Deployment failed - check Jenkins logs"
         }
