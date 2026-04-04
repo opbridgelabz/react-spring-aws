@@ -61,9 +61,9 @@ pipeline {
                     rsync -av -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no" nginx/ ${VM_USER}@${VM_HOST}:${DEPLOY_PATH}/nginx/
                     ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ${VM_USER}@${VM_HOST} '
                         cd ${DEPLOY_PATH} &&
-                        docker compose pull &&
-                        docker compose down &&
-                        docker compose up -d --remove-orphans
+                        docker-compose pull
+                        docker-compose down
+                        docker-compose up -d --remove-orphans
                     '
                     """
                 }
