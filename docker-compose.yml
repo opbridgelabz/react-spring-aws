@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-
   db:
     image: mysql:8.0
     container_name: db
@@ -15,9 +12,7 @@ services:
       - mysql_data:/var/lib/mysql
 
   backend:
-    build:
-      context: ./spring-backend
-      dockerfile: Dockerfile
+    image: koti777/spring-backend:latest
     container_name: backend
     restart: always
     depends_on:
@@ -29,9 +24,7 @@ services:
       - spring.jpa.hibernate.ddl-auto=update
 
   frontend:
-    build:
-      context: ./library-frontend
-      dockerfile: Dockerfile
+    image: koti777/library-frotend:latest
     container_name: frontend
     restart: always
     depends_on:
