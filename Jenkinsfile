@@ -104,7 +104,7 @@ pipeline {
                     docker compose down --remove-orphans
 
                     # ✅ Force recreate so new image is always used
-                    docker compose up -d --force-recreate --remove-orphans
+                    docker compose up -d --build --force-recreate --remove-orphans
 
                     # Clean old images
                     docker image prune -f
